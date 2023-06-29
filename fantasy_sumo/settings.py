@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'hbasho',
+    'fantasy_basho',
+    'graphene_django',
 ]
 
 MIDDLEWARE = [
@@ -57,7 +59,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, "fantasy_sumo", "templates"),
+            os.path.join(BASE_DIR, 'fantasy_sumo', 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -131,3 +133,7 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+GRAPHENE = {
+    'SCHEMA': 'fantasy_sumo.schema.schema',
+}

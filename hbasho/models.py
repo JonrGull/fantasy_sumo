@@ -1,31 +1,18 @@
 from django.db import models
 
 
-MAKUUCHI, JURYO = "HBASHO_MAKUUCHI", "HBASHO_JURYO"
 DIVISION_CHOICES = (
-    (MAKUUCHI, "Makuuchi"),
-    (JURYO, "Juryo"),
+    (MAKUUCHI := "HBASHO_MAKUUCHI", "Makuuchi"),
+    (JURYO := "HBASHO_JURYO", "Juryo"),
 )
 
 
 class Stable(models.Model):
-    name = models.CharField(max_length=32)
-    name_kanji = models.CharField(max_length=32)
+    name = models.CharField(max_length=32, unique=True)
+    name_kanji = models.CharField(max_length=32, unique=True)
     location = models.CharField(max_length=32)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields = ["name"],
-                name = "unique_stable_name",
-            ),
-            models.UniqueConstraint(
-                fields = ["name_kanji"],
-                name = "unique_stable_name_kanji",
-            ),
-        ]
 
     def __str__(self):
         return "%s" % self.name
@@ -50,29 +37,28 @@ class Wrestler(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.last_name
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields = ["last_name", "first_name"],
-                name = "unique_wrestler_name",
+                fields=["last_name", "first_name"],
+                name="unique_wrestler_name",
             ),
             models.UniqueConstraint(
-                fields = ["last_name_kanji", "first_name_kanji"],
-                name = "unique_wrestler_name_kanji",
+                fields=["last_name_kanji", "first_name_kanji"],
+                name="unique_wrestler_name_kanji",
             ),
         ]
 
-    def __str__(self):
-        return "%s %s" % (self.last_name, self.first_name)
-
 
 class Tournament(models.Model):
-    TOKYO, OSAKA, NAGOYA, FUKUOKA = "HBASHO_TOKYO", "HBASHO_OSAKA", "HBASHO_NAGOYA", "HBASHO_FUKUOKA"
     TOURNAMENT_LOCATIONS = (
-        (TOKYO, "Tokyo"),
-        (OSAKA, "Osaka"),
-        (NAGOYA, "Nagoya"),
-        (FUKUOKA, "Fukuoka"),
+        (TOKYO := "HBASHO_TOKYO", "Tokyo"),
+        (OSAKA := "HBASHO_OSAKA", "Osaka"),
+        (NAGOYA := "HBASHO_NAGOYA", "Nagoya"),
+        (FUKUOKA := "HBASHO_FUKUOKA", "Fukuoka"),
     )
     location = models.CharField(max_length=128, choices=TOURNAMENT_LOCATIONS, default=TOKYO)
     start_date = models.DateField()
@@ -88,28 +74,24 @@ class Tournament(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @property
-    def title(self):
-        display = self.get_location_display()
+    def __str__(self):
         month = self.start_date.strftime("%b")
         year = self.start_date.year
-        return f"{display} {month} {year}"
+        return f"{month} {year}"
 
 
 class Rank(models.Model):
     order_by = models.IntegerField()
-    title = models.CharField(max_length=128)
+    title = models.CharField(max_length=128, unique=True)
     division = models.CharField(max_length=128, choices=DIVISION_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.title
+
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields = ["title"],
-                name = "unique_rank_title",
-            )
-        ]
+        ordering = ['order_by']
 
 
 class TournamentWrestler(models.Model):
@@ -126,11 +108,14 @@ class TournamentWrestler(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.wrestler
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields = ["wrestler", "tournament"],
-                name = "unique_tournament_wrestler",
+                fields=["wrestler", "tournament"],
+                name="unique_tournament_wrestler",
             )
         ]
 
@@ -140,8 +125,6 @@ class Match(models.Model):
         Tournament,
         on_delete=models.CASCADE,
     )
-    division = models.CharField(max_length=128, choices=DIVISION_CHOICES)
-    order_by = models.IntegerField()
     date = models.DateField()
     wrestler_west = models.ForeignKey(
         Wrestler,
@@ -162,3 +145,34 @@ class Match(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def get_day_number(self):
+        return (self.date - self.tournament.start_date).days + 1
+
+    def __str__(self):
+        return f"Day {self.get_day_number()}: {self.wrestler_east} vs. {self.wrestler_west}"
+
+
+class WrestlerRecord(models.Model):
+    wrestler = models.OneToOneField(
+        Wrestler,
+        on_delete=models.CASCADE,
+        primary_key=True
+    )
+    wins = models.IntegerField(default=0)
+    lossess = models.IntegerField(default=0)
+    draws = models.IntegerField(default=0)
+    championships_makuuchi = models.IntegerField(default=0)
+    kinboshi = models.IntegerField(default=0)
+    shukun_prizes = models.IntegerField(default=0)
+    kanto_prizes = models.IntegerField(default=0)
+    gino_prizes = models.IntegerField(default=0)
+    highest_rank = models.ForeignKey(
+        Rank,
+        on_delete=models.RESTRICT
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.wrestler
